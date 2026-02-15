@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WordLadder</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪜</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#121213;--surface:#1a1a1b;--border:#3a3a3c;--text:#fff;--text2:#818384;--green:#538d4e;--yellow:#b59f3b;--red:#c9402f;--blue:#4a90d9}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column;align-items:center;-webkit-tap-highlight-color:transparent}
+header{width:100%;max-width:500px;padding:12px 16px;border-bottom:1px solid var(--border);text-align:center}
+header h1{font-size:28px;font-weight:800;letter-spacing:4px}
+.subtitle{font-size:12px;color:var(--text2);margin-top:2px}
+.timer{font-size:11px;color:var(--text2);margin-top:4px;font-variant-numeric:tabular-nums}
+main{width:100%;max-width:500px;padding:16px;flex:1;display:flex;flex-direction:column;gap:8px}
+.word-box{display:flex;justify-content:center;gap:6px;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.word-box .letter{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;border:2px solid var(--border);border-radius:6px;text-transform:uppercase;transition:all .3s}
+.word-box.start .letter{border-color:var(--green);background:var(--green)}
+.word-box.end .letter{border-color:var(--blue);background:var(--blue)}
+.word-box.step .letter{border-color:var(--green);background:rgba(83,141,78,.25)}
+.word-box.invalid .letter{border-color:var(--red);animation:shake .4s}
+.word-box.current .letter{border-color:var(--yellow);background:rgba(181,159,59,.15)}
+.word-box.current .letter.filled{border-color:var(--yellow);background:rgba(181,159,59,.3)}
+.word-box.current .letter.active{border-color:#fff;box-shadow:0 0 0 1px #fff}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.ladder{display:flex;flex-direction:column;gap:6px;align-items:center;flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.connector{width:2px;height:12px;background:var(--border);margin:0 auto}
+.arrow{color:var(--text2);font-size:18px;text-align:center;line-height:1}
+.msg{text-align:center;font-size:14px;min-height:22px;transition:color .2s}
+.msg.error{color:var(--red)}
+.msg.success{color:var(--green)}
+.msg.info{color:var(--text2)}
+.controls{display:flex;flex-direction:column;gap:8px;align-items:center;padding-bottom:8px}
+.input-row{display:flex;gap:8px;justify-content:center;align-items:center}
+.input-row input{width:180px;height:52px;background:var(--surface);border:2px solid var(--border);border-radius:6px;color:var(--text);font-size:24px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:10px;outline:none;caret-color:var(--yellow)}
+.input-row input:focus{border-color:var(--yellow)}
+.input-row input::placeholder{letter-spacing:4px;color:var(--border)}
+.btn{height:52px;padding:0 24px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-secondary{background:var(--border)}
+.btn-small{height:36px;padding:0 16px;font-size:13px}
+.undo-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer}
+.undo-btn:active{opacity:.7}
+.tab-bar{display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.tab-bar button{flex:1;padding:10px 16px;background:var(--surface);border:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.tab-bar button.active{color:var(--text);background:var(--border)}
+.panel{display:none;animation:fadeIn .3s}
+.panel.active{display:block}
+.leaderboard h3{text-align:center;margin:12px 0 8px;font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:2px}
+.leaderboard table{width:100%;border-collapse:collapse;font-size:13px}
+.leaderboard td,.leaderboard th{padding:8px;text-align:left;border-bottom:1px solid var(--border)}
+.leaderboard th{color:var(--text2);font-size:11px;text-transform:uppercase}
+.leaderboard .rank{width:30px;color:var(--text2)}
+.leaderboard .medal{font-size:16px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.stat-card{background:var(--surface);border-radius:8px;padding:12px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:700}
+.stat-card .label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;animation:fadeIn .3s}
+.card{background:var(--surface);border-radius:16px;padding:32px 24px;text-align:center;max-width:400px;width:100%;border:1px solid var(--border)}
+.card h2{font-size:28px;margin-bottom:4px}
+.card .sub{color:var(--text2);font-size:13px;margin-bottom:16px}
+.share-box{background:var(--bg);border-radius:8px;padding:12px;font-family:'SF Mono',Monaco,monospace;font-size:13px;margin:16px 0;white-space:pre;text-align:left;overflow-x:auto;border:1px solid var(--border);line-height:1.6}
+.name-row{display:flex;gap:8px;justify-content:center;margin:12px 0}
+.name-row input{width:160px;height:40px;background:var(--bg);border:2px solid var(--border);border-radius:6px;color:var(--text);font-size:15px;text-align:center;outline:none}
+.name-row input:focus{border-color:var(--yellow)}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:200;animation:toastIn .3s}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.hidden{display:none!important}
+.how-to{padding:12px 0}
+.how-to h3{font-size:14px;color:var(--text2);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;text-align:center}
+.how-to p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+.how-to .example{display:flex;gap:4px;justify-content:center;margin:8px 0}
+.how-to .example .letter{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;border-radius:4px;border:2px solid}
+.how-to .example .g{border-color:var(--green);background:var(--green)}
+.how-to .example .b{border-color:var(--blue);background:var(--blue)}
+.how-to .example .w{border-color:var(--border);background:rgba(83,141,78,.25)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🪜 WORDLADDER</h1>
+  <div class="subtitle">Change one letter at a time · Daily puzzle</div>
+  <div class="timer" id="timer"></div>
+</header>
+<main>
+  <div class="tab-bar">
+    <button class="active" data-tab="game">Play</button>
+    <button data-tab="how">How</button>
+    <button data-tab="stats">Stats</button>
+  </div>
+
+  <div class="panel active" id="panel-game">
+    <div class="ladder" id="ladder"></div>
+    <div class="msg" id="msg"></div>
+    <div class="controls" id="controls">
+      <div class="input-row">
+        <input type="text" id="wordInput" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="····">
+        <button class="btn" id="goBtn">GO</button>
+      </div>
+      <button class="undo-btn hidden" id="undoBtn">↩ Undo last step</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-how">
+    <div class="how-to">
+      <h3>How to Play</h3>
+      <p>Transform the <strong style="color:var(--green)">START</strong> word into the <strong style="color:var(--blue)">END</strong> word by changing <strong>one letter at a time</strong>.</p>
+      <p>Every step must be a valid English word. Fewer steps = better score!</p>
+      <p><strong>Example:</strong> COLD → WARM</p>
+      <div class="example">
+        <div class="letter g">C</div><div class="letter g">O</div><div class="letter g">L</div><div class="letter g">D</div>
+      </div>
+      <div class="example">
+        <div class="letter w">C</div><div class="letter w">O</div><div class="letter w">R</div><div class="letter w">D</div>
+      </div>
+      <div class="example">
+        <div class="letter w">W</div><div class="letter w">O</div><div class="letter w">R</div><div class="letter w">D</div>
+      </div>
+      <div class="example">
+        <div class="letter w">W</div><div class="letter w">A</div><div class="letter w">R</div><div class="letter w">D</div>
+      </div>
+      <div class="example">
+        <div class="letter b">W</div><div class="letter b">A</div><div class="letter b">R</div><div class="letter b">M</div>
+      </div>
+      <p style="margin-top:12px">Everyone gets the same puzzle each day. A new puzzle drops at <strong>midnight UTC</strong>.</p>
+      <p>Share your results with friends! 🎉</p>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-stats">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num" id="statPlayed">0</div><div class="label">Played</div></div>
+      <div class="stat-card"><div class="num" id="statWon">0</div><div class="label">Won</div></div>
+      <div class="stat-card"><div class="num" id="statStreak">0</div><div class="label">Streak</div></div>
+    </div>
+    <div class="leaderboard" id="leaderboard">
+      <h3>Today's Leaderboard</h3>
+      <p style="text-align:center;color:var(--text2);font-size:13px">Scores from this browser</p>
+    </div>
+  </div>
+</main>
+
+<div class="overlay hidden" id="winOverlay">
+  <div class="card">
+    <h2>🎉 Brilliant!</h2>
+    <div class="sub" id="winSub"></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num" id="winSteps">0</div><div class="label">Steps</div></div>
+      <div class="stat-card"><div class="num" id="winOptimal">0</div><div class="label">Optimal</div></div>
+      <div class="stat-card"><div class="num" id="winTime">0s</div><div class="label">Time</div></div>
+    </div>
+    <div class="share-box" id="shareText"></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button class="btn" onclick="copyShare()">📋 Copy</button>
+      <button class="btn btn-secondary" onclick="el('winOverlay').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== WORD LIST ====================
+const WORDS=["able","acid","aged","also","area","army","away","baby","back","ball","band","bank","bare","bark","barn","base","bath","bead","beam","bean","bear","beat","been","beer","bell","belt","bend","best","bike","bill","bind","bird","bite","blow","blue","blur","boat","body","bold","bolt","bomb","bond","bone","book","boot","bore","born","boss","both","bowl","bulk","bull","bump","burn","bush","busy","buzz","cafe","cage","cake","call","calm","came","camp","card","care","cart","case","cash","cast","cave","chip","city","clad","clam","clap","claw","clay","clip","club","clue","coal","coat","code","coil","coin","cold","cole","come","cook","cool","cope","copy","cord","core","cork","corn","cost","coup","cowl","crew","crop","crow","cube","cult","cure","curl","cute","dale","dame","damp","dare","dark","dart","dash","data","date","dawn","dead","deaf","deal","dear","debt","deck","deed","deem","deep","deer","demo","deny","desk","dial","dice","died","diet","dire","dirt","disc","dish","disk","dock","does","dome","done","doom","door","dose","down","drag","draw","drew","drip","drop","drum","dual","duck","dude","duel","duke","dull","dumb","dump","dune","dusk","dust","duty","each","earl","earn","ease","east","easy","edge","else","emit","euro","even","ever","evil","exam","exit","face","fact","fade","fail","fair","fake","fall","fame","fang","fare","farm","fast","fate","fear","feat","feed","feel","feet","fell","felt","file","fill","film","find","fine","fire","firm","fish","fist","five","flag","flap","flat","flaw","fled","flew","flex","flip","flit","flog","flow","foam","fold","folk","fond","font","food","fool","foot","ford","fore","fork","form","fort","foul","four","free","from","fuel","full","fund","fuse","fuss","gain","gale","game","gang","gape","garb","gash","gasp","gate","gave","gaze","gear","gene","gift","girl","give","glad","glow","glue","goat","goes","gold","golf","gone","good","grab","gram","gray","grew","grid","grim","grin","grip","grow","gulf","guru","gust","guts","hack","hail","hair","hale","half","hall","halt","hand","hang","hard","hare","harm","harp","hash","hate","haul","have","haze","head","heal","heap","hear","heat","heel","held","hell","help","herb","herd","here","hero","hide","high","hike","hill","hint","hire","hold","hole","holy","home","hood","hook","hope","horn","host","hour","huge","hull","hung","hunt","hurt","hush","hymn","icon","idea","inch","into","iron","isle","item","jack","jade","jail","jazz","jean","jerk","jest","jobs","join","joke","jump","jury","just","keen","keep","kept","kick","kill","kind","king","kiss","kite","knee","knew","knit","knob","knot","know","lace","lack","laid","lake","lame","lamp","land","lane","lard","last","late","lawn","lead","leaf","leak","lean","leap","left","lend","lens","less","lick","lied","life","lift","like","limb","lime","limp","line","link","lint","lion","lips","list","live","load","loaf","loan","lock","loft","logo","lone","long","look","loop","lord","lore","lose","loss","lost","loud","love","luck","lump","lung","lure","lurk","made","mail","main","make","male","mall","mane","many","mare","mark","mars","mash","mask","mass","mast","mate","maze","meal","mean","meat","meet","meld","melt","memo","mend","menu","mere","mesh","mess","mild","mile","milk","mill","mind","mine","mint","miss","mist","moan","moat","mock","mode","mold","mole","mood","moon","more","moss","most","moth","move","much","mule","muse","mush","must","mute","myth","nail","name","navy","near","neat","neck","need","nest","news","next","nice","nine","node","none","norm","nose","note","noun","nude","obey","odds","only","onto","open","oral","ours","oval","oven","over","pace","pack","page","paid","pain","pair","pale","palm","pane","park","part","pass","past","path","peak","peal","pear","peel","peer","perk","pest","pick","pier","pile","pine","pink","pipe","plan","play","plea","plot","plug","plum","plus","poem","poet","pole","poll","polo","pond","pool","poor","pope","pork","port","pose","post","pour","pray","prop","pull","pulp","pump","pure","push","race","rack","rage","raid","rail","rain","rake","ramp","rang","rank","rare","rash","rate","read","real","rear","reed","reef","reel","rein","rely","rend","rent","rest","rice","rich","ride","rift","ring","riot","rise","risk","road","roam","roar","robe","rock","rode","role","roll","roof","room","root","rope","rose","ruin","rule","rump","rung","rush","rust","sack","safe","sage","said","sail","sake","sale","salt","same","sand","sane","sang","save","seal","seam","sear","seat","seed","seek","seem","seen","self","sell","send","sent","shed","shin","ship","shop","shot","show","shut","sick","side","sigh","sign","silk","sing","sink","site","size","slam","slap","slat","sled","slew","slid","slim","slip","slit","slot","slow","slug","snap","snip","snow","soak","soar","sock","soft","soil","sold","sole","solo","some","song","soon","sort","soul","sour","span","spar","spin","spit","spot","star","stay","stem","step","stew","stir","stop","stub","stud","such","suit","sulk","sure","surf","swan","swap","swim","tail","take","tale","talk","tall","tame","tank","tape","taps","task","taxi","team","tear","tell","tend","tent","term","test","text","than","that","them","then","they","thin","this","tide","tidy","tied","tier","tile","till","tilt","time","tiny","tire","toad","toil","told","toll","tomb","tone","took","tool","tops","tore","torn","toss","tour","town","trap","tray","tree","trim","trio","trip","trod","true","tube","tuck","tune","turn","twin","type","ugly","unit","unto","upon","urge","used","user","vale","vane","vary","vast","veil","vein","verb","very","vest","veto","vice","view","vine","void","volt","vote","wade","wage","wait","wake","walk","wall","wane","ward","warm","warn","warp","wars","wash","wave","weak","wear","weed","week","weir","well","went","were","west","what","when","whom","wick","wide","wife","wild","will","wilt","wily","wind","wine","wing","wink","wipe","wire","wise","wish","with","woke","wolf","wood","wool","word","wore","work","worm","worn","wrap","yard","yarn","year","yell","your","zeal","zero","zinc","zone","zoom"];
+const WORD_SET=new Set(WORDS);
+
+// ==================== UTILS ====================
+const el=id=>document.getElementById(id);
+
+function seededRandom(seed){
+  let h=0;
+  for(let i=0;i<seed.length;i++) h=Math.imul(31,h)+seed.charCodeAt(i)|0;
+  return()=>{h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);h^=h>>>16;return(h>>>0)/4294967296};
+}
+
+function diffByOne(a,b){
+  if(a.length!==b.length)return false;
+  let d=0;
+  for(let i=0;i<a.length;i++){if(a[i]!==b[i])d++;if(d>1)return false}
+  return d===1;
+}
+
+function bfs(start,end){
+  if(start===end)return[start];
+  const q=[[start,[start]]];
+  const visited=new Set([start]);
+  while(q.length){
+    const[cur,path]=q.shift();
+    const chars=cur.split('');
+    for(let i=0;i<chars.length;i++){
+      const orig=chars[i];
+      for(let c=97;c<=122;c++){
+        chars[i]=String.fromCharCode(c);
+        const next=chars.join('');
+        if(next===end)return[...path,end];
+        if(WORD_SET.has(next)&&!visited.has(next)){visited.add(next);q.push([next,[...path,next]])}
+      }
+      chars[i]=orig;
+    }
+  }
+  return null;
+}
+
+function getTodayUTC(){return new Date().toISOString().split('T')[0]}
+
+function getDailyPuzzle(){
+  const date=getTodayUTC();
+  const rand=seededRandom('wordladder-'+date);
+  for(let attempt=0;attempt<300;attempt++){
+    const i=Math.floor(rand()*WORDS.length);
+    const j=Math.floor(rand()*WORDS.length);
+    if(i===j)continue;
+    const start=WORDS[i],end=WORDS[j];
+    const path=bfs(start,end);
+    if(path&&path.length>=4&&path.length<=7){
+      return{start:start.toUpperCase(),end:end.toUpperCase(),optimal:path.length-1,date};
+    }
+  }
+  return{start:'COLD',end:'WARM',optimal:4,date};
+}
+
+// ==================== STATE ====================
+let puzzle,chain,startTime,won,elapsed;
+
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem('wl_state')||'null');
+    if(s&&s.date===getTodayUTC()){
+      chain=s.chain;won=s.won;startTime=s.startTime;elapsed=s.elapsed||0;
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+function saveState(){
+  localStorage.setItem('wl_state',JSON.stringify({date:getTodayUTC(),chain,won,startTime,elapsed:won?elapsed:0}));
+}
+
+function loadStats(){
+  try{return JSON.parse(localStorage.getItem('wl_stats')||'{"played":0,"won":0,"streak":0,"lastWin":"","scores":[]}')}
+  catch(e){return{played:0,won:0,streak:0,lastWin:"",scores:[]}}
+}
+
+function saveStats(stats){localStorage.setItem('wl_stats',JSON.stringify(stats))}
+
+// ==================== RENDERING ====================
+function render(){
+  const ladder=el('ladder');
+  ladder.innerHTML='';
+  
+  // Start word
+  ladder.appendChild(makeWord(puzzle.start,'start'));
+  
+  // Steps
+  for(let i=1;i<chain.length;i++){
+    ladder.appendChild(makeConn());
+    const cls=i===chain.length-1&&won?'end':'step';
+    ladder.appendChild(makeWord(chain[i],cls));
+  }
+  
+  if(!won){
+    ladder.appendChild(makeConn());
+    ladder.appendChild(makeArrow());
+    ladder.appendChild(makeConn());
+    ladder.appendChild(makeWord(puzzle.end,'end'));
+  }
+  
+  // Scroll to bottom
+  requestAnimationFrame(()=>ladder.scrollTop=ladder.scrollHeight);
+  
+  // Undo button
+  el('undoBtn').classList.toggle('hidden',chain.length<=1||won);
+  el('controls').classList.toggle('hidden',won);
+  
+  // Update stats panel
+  const stats=loadStats();
+  el('statPlayed').textContent=stats.played;
+  el('statWon').textContent=stats.won;
+  el('statStreak').textContent=stats.streak;
+  renderLeaderboard(stats);
+}
+
+function makeWord(word,cls){
+  const div=document.createElement('div');
+  div.className='word-box '+(cls||'');
+  for(const ch of word){
+    const s=document.createElement('div');
+    s.className='letter';
+    s.textContent=ch;
+    div.appendChild(s);
+  }
+  return div;
+}
+
+function makeConn(){const d=document.createElement('div');d.className='connector';return d}
+function makeArrow(){const d=document.createElement('div');d.className='arrow';d.textContent='⋮';return d}
+
+function showMsg(text,type='info'){
+  const m=el('msg');
+  m.textContent=text;
+  m.className='msg '+type;
+  if(type==='error')setTimeout(()=>{if(m.textContent===text)m.textContent=''},2500);
+}
+
+function toast(text){
+  const t=document.createElement('div');
+  t.className='toast';
+  t.textContent=text;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2000);
+}
+
+function renderLeaderboard(stats){
+  const lb=el('leaderboard');
+  const today=stats.scores.filter(s=>s.date===getTodayUTC());
+  if(!today.length){
+    lb.innerHTML='<h3>Today\'s Scores</h3><p style="text-align:center;color:var(--text2);font-size:13px;padding:16px">Complete today\'s puzzle to see your score!</p>';
+    return;
+  }
+  const sorted=[...today].sort((a,b)=>a.steps-b.steps||(a.time||0)-(b.time||0));
+  let html='<h3>Your Scores</h3><table><tr><th>#</th><th>Steps</th><th>Time</th><th>vs Optimal</th></tr>';
+  sorted.forEach((s,i)=>{
+    const diff=s.steps-puzzle.optimal;
+    const badge=diff===0?'⭐':diff===1?'👍':'';
+    html+=`<tr><td class="rank">${i+1}</td><td>${s.steps}</td><td>${fmtTime(s.time)}</td><td>${diff===0?'Perfect!':'+'+diff} ${badge}</td></tr>`;
+  });
+  html+='</table>';
+  lb.innerHTML=html;
+}
+
+function fmtTime(s){if(!s)return'-';return s<60?s+'s':Math.floor(s/60)+'m '+s%60+'s'}
+
+// ==================== GAME LOGIC ====================
+function tryWord(){
+  if(won)return;
+  const input=el('wordInput');
+  const word=input.value.trim().toUpperCase();
+  input.value='';
+  input.focus();
+  
+  if(word.length!==4){showMsg('Enter a 4-letter word','error');return}
+  
+  const prev=chain[chain.length-1];
+  const lower=word.toLowerCase();
+  
+  if(!WORD_SET.has(lower)){showMsg('Not a valid word','error');flashInvalid(word);return}
+  if(!diffByOne(lower,prev.toLowerCase())){showMsg('Change exactly one letter','error');flashInvalid(word);return}
+  if(chain.includes(word)){showMsg('Already used that word','error');return}
+  
+  chain.push(word);
+  showMsg('');
+  
+  if(word===puzzle.end){
+    won=true;
+    elapsed=Math.round((Date.now()-startTime)/1000);
+    saveState();
+    recordWin();
+    render();
+    setTimeout(showWin,600);
+    return;
+  }
+  
+  saveState();
+  render();
+}
+
+function flashInvalid(word){
+  // Brief flash in the ladder
+  const ladder=el('ladder');
+  const conn=makeConn();
+  const box=makeWord(word,'invalid');
+  const ref=ladder.querySelector('.arrow')?.parentElement===ladder?ladder.querySelector('.arrow'):null;
+  if(ref){ladder.insertBefore(conn,ref);ladder.insertBefore(box,ref)}
+  setTimeout(()=>{conn.remove();box.remove()},500);
+}
+
+function undo(){
+  if(chain.length<=1||won)return;
+  chain.pop();
+  saveState();
+  render();
+  showMsg('Step removed','info');
+}
+
+function recordWin(){
+  const stats=loadStats();
+  const steps=chain.length-1;
+  
+  // Check if already played today
+  const todayScores=stats.scores.filter(s=>s.date===getTodayUTC());
+  if(todayScores.length===0)stats.played++;
+  
+  stats.won++;
+  const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+  stats.streak=(stats.lastWin===yesterday||stats.lastWin===getTodayUTC())?stats.streak+1:1;
+  stats.lastWin=getTodayUTC();
+  stats.scores.push({date:getTodayUTC(),steps,time:elapsed});
+  // Keep last 30 days
+  const cutoff=new Date(Date.now()-30*86400000).toISOString().split('T')[0];
+  stats.scores=stats.scores.filter(s=>s.date>=cutoff);
+  saveStats(stats);
+}
+
+function showWin(){
+  const steps=chain.length-1;
+  const diff=steps-puzzle.optimal;
+  el('winSteps').textContent=steps;
+  el('winOptimal').textContent=puzzle.optimal;
+  el('winTime').textContent=fmtTime(elapsed);
+  el('winSub').textContent=diff===0?'Perfect score! You found the optimal path!':diff===1?'Just one step over optimal. So close!':'Completed in '+steps+' steps';
+  
+  // Share text
+  let share=`🪜 WordLadder ${puzzle.date}\n`;
+  share+=`${puzzle.start} → ${puzzle.end}\n`;
+  const rating=diff===0?'⭐':diff<=1?'🟢':diff<=2?'🟡':'🔴';
+  share+=`${steps} steps (optimal: ${puzzle.optimal}) ${rating}\n\n`;
+  for(let i=0;i<chain.length;i++){
+    if(i===0)share+='🟩 ';
+    else if(i===chain.length-1)share+='🟦 ';
+    else share+='⬜ ';
+    // Show changed letter position
+    if(i>0){
+      let s='';
+      for(let j=0;j<4;j++) s+=chain[i][j]===chain[i-1][j]?'·':chain[i][j];
+      share+=s;
+    }else{
+      share+=chain[i];
+    }
+    share+='\n';
+  }
+  share+='\nhttps://gadget-the-bot.github.io/word-ladder';
+  el('shareText').textContent=share;
+  el('winOverlay').classList.remove('hidden');
+}
+
+function copyShare(){
+  navigator.clipboard.writeText(el('shareText').textContent).then(()=>toast('Copied to clipboard!')).catch(()=>toast('Copy failed'));
+}
+
+// ==================== TIMER ====================
+function updateTimer(){
+  const now=new Date();
+  const midnight=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1));
+  const diff=midnight-now;
+  const h=String(Math.floor(diff/3600000)).padStart(2,'0');
+  const m=String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+  const s=String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+  el('timer').textContent=`Next puzzle in ${h}:${m}:${s}`;
+}
+
+// ==================== TABS ====================
+document.querySelectorAll('.tab-bar button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    el('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ==================== INIT ====================
+puzzle=getDailyPuzzle();
+
+if(!loadState()){
+  chain=[puzzle.start];
+  won=false;
+  startTime=Date.now();
+  elapsed=0;
+  saveState();
+}
+
+if(won){
+  elapsed=elapsed||0;
+}
+
+render();
+updateTimer();
+setInterval(updateTimer,1000);
+
+el('goBtn').addEventListener('click',tryWord);
+el('wordInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryWord()});
+el('undoBtn').addEventListener('click',undo);
+
+// Focus input
+el('wordInput').focus();
+
+// Check for day change
+setInterval(()=>{
+  if(getTodayUTC()!==puzzle.date){
+    puzzle=getDailyPuzzle();
+    chain=[puzzle.start];won=false;startTime=Date.now();elapsed=0;
+    saveState();render();
+    toast('New puzzle! 🎉');
+  }
+},30000);
+</script>
+</body>
+</html>
